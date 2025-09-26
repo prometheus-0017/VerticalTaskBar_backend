@@ -1,9 +1,9 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout
-from PyQt5.QtWebEngineWidgets import QWebEngineView
-from PyQt5.QtCore import Qt, QUrl
-from PyQt5.QtCore import QThread, pyqtSlot, pyqtSignal,QObject
-from PyQt5.QtGui import QCursor
+from PySide6.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QHBoxLayout
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtCore import QThread, Slot, Signal,QObject
+from PySide6.QtGui import QCursor
 from conf import conf
 width=350
 class CustomWebView(QWebEngineView):
@@ -17,9 +17,9 @@ def getWindow():
     global window
     return window
 class CustomWindow(QWidget):
-    exitSignal = pyqtSignal()
-    expandSignal = pyqtSignal()
-    collapseSignal = pyqtSignal()
+    exitSignal = Signal()
+    expandSignal = Signal()
+    collapseSignal = Signal()
     def exit(self):
         import sys
         sys.exit(0)
@@ -85,7 +85,7 @@ class CustomWindow(QWidget):
         # 鼠标进入时展开
         self.expand()
         super().enterEvent(event)
-    @pyqtSlot()
+    @Slot()
     def onExitIntent(self):
         import sys
         sys.exit(0)
@@ -93,7 +93,8 @@ class CustomWindow(QWidget):
         print('asas')
         if event.mimeData().hasUrls():
             print('dddr')
-            self.enterEvent(event)
+            self.expand()
+            # self.enterEvent(event)
     
 
     def leaveEvent(self, event):

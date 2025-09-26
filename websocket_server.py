@@ -1,70 +1,27 @@
+from xuri_rpc import  Message,MessageReceiverOptions,RunnableProxyManager,PlainProxyManager,setHostId,Client,ISender,asProxy,getMessageReceiver,MessageReceiver 
+
 import asyncio
 import websockets
 import rpc_content
 import json
-import rpc_framework
-websocketDict={}
-async def echo(websocket, path):
-    async for message in websocket:
-        data=json.loads(message)
-        if(data['app']=='setName'):
-            name=data['data']['name']
-            websocketDict[name]=websocket
-            res=dict(
-                status='success',
-                data=res,
-                id_for=data['id']
-            )
-            await websocket.send(json.dumps(res))
-        if(data['app']=='remoteExec'):
-            data=data['data']
-            name=data['name']
-            if(name in websocketDict):
-                forward=dict(cmdName=data['cmdName'],argList=data['argList'])
-                await websocketDict[name].send(json.dumps(forward))
-                res=dict(
-                    status='success',
-                    data=res,
-                    id_for=data['id']
-                )
-                await websocket.send(json.dumps(res))
-            else:
-                res=dict(
-                    status='error',
-                    data='no such user',
-                    id_for=data['id']
-                )
-                await websocket.send(json.dumps(res))
+import rpc_content
 
-        if(data['app']=='rpc'):
-            try:
-                res=rpc_framework._rpc(data['data'])
-                res=dict(
-                    status='success',
-                    data=res,
-                    id_for=data['id']
-                )
-                await websocket.send(json.dumps(res))
-            except Exception as e:
-                res=dict(
-                    status='error',
-                    data=str(e),
-                    id_for=data['id']
-                )
-                await websocket.send(json.dumps(res))
-        if(data['app']=='batchRpc'):
-            res=rpc_framework._batchRpc(data['data'])
-            await websocket.send(json.dumps(dict(
-                status='success',
-                data=res,
-                id_for=data['id']
-            )))
-    for k in websocketDict:
-        if(websocketDict[k]==websocket):
-            del websocketDict[k]
+setHostId('taskbarBackend')
+getMessageReceiver().setObject('rpc',rpc_content,True)
 
-from threading import Thread
-thread=None
+class Sender(ISender):
+    def __init__(self,websocket):
+        self.websocket=websocket
+    async def send(self,message:Message):
+        await self.websocket.send(json.dumps(message))
+
+async def onMessageReceived(websocket, path):
+    async for msg in websocket:
+        message:Message=json.loads(msg)
+        client=Client()
+        client.setSender(Sender(websocket))
+        asyncio.ensure_future(getMessageReceiver().onReceiveMessage(message,client))
+        # getMessageReceiver().onMessageReceived(message,Client(Sender(websocket)))
 
 import conf
 def startWebSocket():
@@ -72,8 +29,9 @@ def startWebSocket():
     print('trying starting')
     loop=asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    start_server = websockets.serve(echo, "0.0.0.0", conf.get('websocketPort'))
+    start_server = websockets.serve(onMessageReceived, "0.0.0.0", conf.get('websocketPort'))
     asyncio.get_event_loop().run_until_complete(start_server)
     asyncio.get_event_loop().run_forever()
 if(__name__=='__main__'):
-    main()
+    startWebSocket()
+    # main()

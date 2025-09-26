@@ -2,10 +2,12 @@ import sys
 if('.' not in sys.path):
     sys.path.append('.')
 import os
-from util import detach,is_port_in_use,messageBox
 dllPath=os.environ.get('dllPath')
+print(dllPath)
 if(dllPath):
+    print('adding',dllPath)
     os.add_dll_directory(dllPath)
+from util import detach,is_port_in_use,messageBox
 # os.add_dll_directory(r'C:\Users\lzy\Desktop\taskbar\python-3.12.7-embed-amd64\Lib\site-packages\pywin32_system32')
 
 import conf
@@ -20,7 +22,7 @@ if(is_port_in_use(conf.get('websocketPort'))):
     sys.exit(1)
 
 from http_server import startHttpServer
-from window import startView
+from ui import startView
 from websocket_server import startWebSocket
 detach(startHttpServer)
 detach(startWebSocket)

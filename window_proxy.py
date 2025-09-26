@@ -264,8 +264,8 @@ class WindowProxy:
             return res
         except:
             import traceback
-            print('fail:',pid)
-            traceback.print_exc()
+            # print('fail:',pid)
+            # traceback.print_exc()
             return 'none'
 
     def listChildren(self)->list['WindowProxy']:

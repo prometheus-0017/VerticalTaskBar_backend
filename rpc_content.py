@@ -63,10 +63,11 @@ def queryList(sess):
 def toTop(sess,windowId):
     window_proxy.setTop(windowId)
     pass
-from PyQt5.QtCore import QMetaObject,Qt
+# from PyQt5.QtCore import QMetaObject,Qt
+from PySide6.QtCore import QMetaObject,Qt
 
 
-from window import getWindow
+from ui import getWindow
 def exit(sess):
     getWindow().exitSignal.emit()
 def expand(sess):
