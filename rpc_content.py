@@ -60,6 +60,18 @@ def queryList(sess):
     ) for item in lst]
     # res.sort(key=lambda item:item['processId'])
     return res
+import json
+def saveStatus(sess,status):
+    with open('status.json','w',encoding='utf-8') as f:
+        f.write(json.dumps(status,ensure_ascii=False))
+    return True
+def loadStatus(sess):
+    try:
+        with open('status.json','r',encoding='utf-8') as f:
+            return json.loads(f.read())
+    except :
+        return None
+
 def toTop(sess,windowId):
     window_proxy.setTop(windowId)
     pass
