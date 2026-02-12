@@ -9,17 +9,41 @@ import rpc_content
 setHostId('taskbarBackend')
 getMessageReceiver().setObject('rpc',rpc_content,True)
 
-class Sender(ISender):
-    def __init__(self,websocket):
-        self.websocket=websocket
-    async def send(self,message:Message):
-        await self.websocket.send(json.dumps(message))
+hostId2Websocket:dict[str,websockets.WebSocketServerProtocol]={}
+hostId2Sender:dict[str,ISender]={}
 
+class Sender(ISender):
+    def __init__(self,remoteHostId,websocket):
+        # self.websocket=websocket
+        hostId2Websocket[remoteHostId]=websocket
+        self.remoteHostId=remoteHostId
+
+    async def send(self,message:Message):
+        socket= hostId2Websocket.get(self.remoteHostId)
+        if(socket==None):
+            raise Exception('websocket is closed')
+        await socket.send(json.dumps(message))
+from typing import cast
+#todo add xuri_rpc Request
+from xuri_rpc import Request
 async def onMessageReceived(websocket, path):
+    sender=None
     async for msg in websocket:
         message:Message=json.loads(msg)
         client=Client()
-        client.setSender(Sender(websocket))
+        def isRequest(message:Message):
+            return message.get('idFor')==None
+        if(isRequest(message)):
+            request=cast(Request,message)
+            remoteHostId=request['meta'].get('hostId')
+            sender=Sender(remoteHostId,websocket)
+        else:
+            if(sender==None):
+                print("warnning: sender is None")
+        if(sender==None):
+            return
+        
+        client.setSender(sender)
         asyncio.ensure_future(getMessageReceiver().onReceiveMessage(message,client))
         # getMessageReceiver().onMessageReceived(message,Client(Sender(websocket)))
 

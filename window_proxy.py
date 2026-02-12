@@ -4,40 +4,10 @@ import win32con
 import win32ui
 from io import BytesIO
 import win32process
+from typing import Optional
 from PIL import Image
+import hashlib
 
-def save_icon_to_bitmap(hIcon, filename="output.png"):
-    # 创建一个设备描述表(Device Context)
-    hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
-    hbmp = win32ui.CreateBitmap()
-
-    # 获取图标信息
-    icon_info = win32gui.GetIconInfo(hIcon)
-    icon_size = icon_info[3]  # 假定宽高相等
-    bitmap=win32gui.GetObject(icon_info[3])
-    w=bitmap.bmWidth
-    h=bitmap.bmHeight
-    
-    # 创建一个与图标大小相同的位图
-    hbmp.CreateCompatibleBitmap(hdc, w,h)
-    hdc = hdc.CreateCompatibleDC()
-    hdc.SelectObject(hbmp)
-
-    # 绘制图标
-    hdc.DrawIcon((0, 0), hIcon)
-
-    # 将位图转换为PIL图像并保存
-    bmpstr = hbmp.GetBitmapBits(True)
-    image = Image.frombuffer('RGB', ( w,h), bmpstr, 'raw', 'BGRX', 0, 1)
-    image.save(filename, "PNG")
-
-    # 清理
-    try:
-        win32gui.ReleaseDC(0, hdc.GetSafeHdc())
-        win32gui.DestroyIcon(hIcon)
-    except:
-        import traceback
-        traceback.print_exc()
 from threading import Lock
 foregroundLock = Lock()
 
@@ -133,100 +103,130 @@ def isWindow(hwnd):
     return True
 class IconManager:
     def __init__(self):
-        self.hicon2data={}
-        self.hwnd2hicon={}
-        self.hiconCount={}
-    def saveIcon(self,window:'WindowProxy'):
-        hwnd=window.hwnd
-        if(hwnd in self.hwnd2hicon):
-            return
-        hIconHandle= win32gui.GetClassLong(window.hwnd,win32con.GCL_HICON)
-        if(hIconHandle==0):
-            path=window.getProcessPath()
+        self.hash2data = {}  # hash -> icon data mapping
+        self.hwnd2hash = {}  # hwnd -> hash mapping
+        self.hashCount = {}  # reference count for each hash
+    
+    def saveIcon(self, window:'WindowProxy') -> str:
+        hwnd = window.hwnd
+        
+        # Check if we already have a hash for this window
+        if hwnd in self.hwnd2hash:
+            return self.hwnd2hash[hwnd]
+        
+        hIconHandle = win32gui.GetClassLong(window.hwnd, win32con.GCL_HICON)
+        if hIconHandle == 0:
+            path = window.getProcessPath()
             try:
-                hIconHandle=win32gui.ExtractIcon(None,path,0)
+                hIconHandle = win32gui.ExtractIcon(None, path, 0)
             except Exception as e:
                 import traceback
                 traceback.print_exc()
                 print(path)
-        if(hIconHandle==0):
-            return
-        if(hIconHandle in self.hicon2data):
-            print('hit!!!')
-            self.hwnd2hicon[hwnd]=hIconHandle
-            return
-        hIcon=win32gui.GetIconInfo(hIconHandle)
-
-        # 创建一个设备描述表(Device Context)
+        
+        if hIconHandle == 0:
+            return None
+        
+        # Create a device context (DC)
         hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
         hbmp = win32ui.CreateBitmap()
 
-        # 获取图标信息
-        hIcon=hIconHandle
-        icon_info = win32gui.GetIconInfo(hIcon)
-        icon_size = icon_info[3]  # 假定宽高相等
-        bitmap=win32gui.GetObject(icon_info[3])
-        w=bitmap.bmWidth
-        h=bitmap.bmHeight
+        # Get icon info
+        icon_info = win32gui.GetIconInfo(hIconHandle)
+        # icon_size = icon_info[3]  # This was incorrectly getting size, should be width and height from bitmap
+        hIcon = hIconHandle
+        icon_size = win32gui.GetIconInfo(hIcon)
         
-        # 创建一个与图标大小相同的位图
-        hbmp.CreateCompatibleBitmap(hdc, w,h)
+        # Get the bitmap information for the icon
+        bitmap = win32gui.GetObject(icon_info[3])
+        w = bitmap.bmWidth
+        h = bitmap.bmHeight
+        
+        # Create a bitmap compatible with the DC
+        hbmp.CreateCompatibleBitmap(hdc, w, h)
         hdc = hdc.CreateCompatibleDC()
         hdc.SelectObject(hbmp)
 
-        # 绘制图标
+        # Draw the icon
         hdc.DrawIcon((0, 0), hIcon)
 
-        # 将位图转换为PIL图像并保存
+        # Convert bitmap to PIL image
         bmpstr = hbmp.GetBitmapBits(True)
-        image = Image.frombuffer('RGB', ( w,h), bmpstr, 'raw', 'BGRX', 0, 1)
-        memBuffer=BytesIO()
+        image = Image.frombuffer('RGB', (w, h), bmpstr, 'raw', 'BGRX', 0, 1)
+        memBuffer = BytesIO()
         image.save(memBuffer, "PNG")
 
-        self.hicon2data[hIconHandle]=memBuffer.getvalue()
-        self.hiconCount[hIconHandle]=0
-        self.hwnd2hicon[hwnd]=hIconHandle
+        # Generate a hash of the icon data
+        icon_data = memBuffer.getvalue()
+        icon_hash = hashlib.md5(icon_data).hexdigest()
+        
+        # Store the icon data with its hash
+        if icon_hash not in self.hash2data:
+            self.hash2data[icon_hash] = icon_data
+            self.hashCount[icon_hash] = 0
+            
+        # Map the window to the hash
+        self.hwnd2hash[hwnd] = icon_hash
+        self.hashCount[icon_hash] += 1
 
-        # 清理
+        # Cleanup
         try:
             win32gui.ReleaseDC(0, hdc.GetSafeHdc())
             win32gui.DestroyIcon(hIcon)
         except:
             import traceback
             traceback.print_exc()
-    def getIconByHWND(self,hwnd):
-        hIconHandle=self.hwnd2hicon.get(hwnd)
-        if(hIconHandle==None):
+            
+        return icon_hash
+
+    def getIconByHash(self, icon_hash: str)->Optional[bytes]:
+        """Retrieve icon data by its hash"""
+        if icon_hash not in self.hash2data:
             return None
-        return self.getIconByHIcon(hIconHandle)
-    def getIconByHIcon(self,hicon):
-        if(hicon not in self.hicon2data):
+        self.hashCount[icon_hash] += 1
+        return self.hash2data.get(icon_hash)
+    
+    def getIconByHWND(self, hwnd):
+        """Get icon data by window handle"""
+        icon_hash = self.hwnd2hash.get(hwnd)
+        if icon_hash is None:
             return None
-        self.hiconCount[hicon]+=1
-        return self.hicon2data.get(hicon)
+        return self.getIconByHash(icon_hash)
+        
+    def removeIcon(self, hwnd):
+        """Remove icon mapping for a window"""
+        if hwnd in self.hwnd2hash:
+            icon_hash = self.hwnd2hash[hwnd]
+            del self.hwnd2hash[hwnd]
+            
+            # Decrease reference count
+            self.hashCount[icon_hash] -= 1
+            if self.hashCount[icon_hash] <= 0:
+                # Remove the icon data if no references remain
+                del self.hash2data[icon_hash]
+                del self.hashCount[icon_hash]
 iconManager=IconManager()
 
 class WindowProxy:
     def getId(self):
         return self.hwnd
     def _iconPath(self):
-        return f'icons/{self.hwnd}'
+        return f'icons/{iconManager.hwnd2hash.get(self.hwnd,"0000")}'
     def getIconPath(self):
         return self._iconPath()
     def __init__(self,previous:'WindowProxy',hwnd):
         self.hwnd = hwnd
         self.previous = previous
         pass
-    def saveIcon(self)->int:
-        iconManager.saveIcon(self)
-        return
-        hIconHandle= win32gui.GetClassLong(self.hwnd,win32con.GCL_HICON)
-        if(hIconHandle==0):
-            return None
-        hIcon=win32gui.GetIconInfo(hIconHandle)
-        bitmap=win32gui.GetObject(hIcon[3])
-        save_icon_to_bitmap(hIconHandle,self._iconPath())
-        return bitmap
+    def saveIcon(self) -> str:
+        return iconManager.saveIcon(self)
+        # hIconHandle= win32gui.GetClassLong(self.hwnd,win32con.GCL_HICON)
+        # if(hIconHandle==0):
+        #     return None
+        # hIcon=win32gui.GetIconInfo(hIconHandle)
+        # bitmap=win32gui.GetObject(hIcon[3])
+        # save_icon_to_bitmap(hIconHandle,self._iconPath())
+        # return bitmap
         
         pass
     def deleteIcon(self):

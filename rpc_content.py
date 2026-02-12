@@ -1,65 +1,119 @@
 import window_proxy
+from typing import TypedDict,Union,Literal
 from window_proxy import WindowProxy
 windowsBefore:dict[int,WindowProxy]={}
 version=0
-def queryHasUpdate(sess,remoteVersion):
-    global version
+
+class WindowProxyDTO(TypedDict):
+    processId:int
+    id:int
+    originalName:str
+    modifiedName:str
+    processName:str
+    originalIcon:str
+    modifiedIcon:str
+class WindowChangeInfo(TypedDict):
+    type:Literal['add','change','delete']
+    data:WindowProxyDTO
+
+from typing import Callable,Awaitable
+callbacklist:list[Callable[[list[WindowChangeInfo]],Awaitable[None]]]=[]
+
+loopStart=False
+import asyncio
+from logging import getLogger
+logger=getLogger(__name__)
+import logging
+logging.basicConfig(level=logging.INFO,filemode='log.txt')
+async def setCallback(context,callback):
+    callbacklist.append(callback)
+    # await detectChange()
+    global loopStart
+    if(not loopStart):
+        async def loop():
+            global loopStart
+            loopStart=True
+            while True:
+                await asyncio.sleep(1);
+                await detectChange()
+        asyncio.ensure_future(loop())
+from websockets.exceptions import ConnectionClosedError
+async def notify(infos:list[WindowChangeInfo]):
+    for callback in callbacklist:
+        try:
+            await callback(infos)
+        except ConnectionClosedError:
+            callbacklist.remove(callback)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            callbacklist.remove(callback)
+async def sync(context):
+    return [WindowProxyDTO(
+        processId=v.getProcess(),
+        id=v.getId(),
+        originalName=v.getTitle(),
+        modifiedName=v.getTitle(),
+        processName=v.getProcessFileName(),
+        originalIcon=v.getIconPath(),
+        modifiedIcon=v.getIconPath()
+    ) for v in windowsBefore.values()]
+async def detectChange():
     global windowsBefore
-    
-    # 如果请求是致远星发来的那就直接刷新
-    if(version!=remoteVersion):
-        return version
 
     windowList:list[WindowProxy]=WindowProxy.getTopWindow().listChildren()
     windowsNow={item.hwnd:item for item in windowList}
+    infoUpdates:list[WindowChangeInfo]=[]
+    old=[windowsBefore[k] for k in windowsBefore.keys()-windowsNow.keys()]
+    new=[windowsNow[k] for k in windowsNow.keys()-windowsBefore.keys()]
+    common=[windowsNow[k] for k in windowsNow.keys()&windowsBefore.keys() if(windowsBefore[k].getTitle()!=windowsNow[k].getTitle())]
+    for v in old:
+        logger.info(f'delete {v.getId()} {v.getTitle()}')
+    for v in new:
+        logger.info(f'add {v.getId()} {v.getTitle()}')
+        v.saveIcon()
+    for v in new:
+        v.saveIcon()
+    infoUpdates.extend([WindowChangeInfo(
+        type='delete',
+        data=WindowProxyDTO(
+            processId=v.getProcess(),
+            id=v.getId(),
+            originalName=v.getTitle(),
+            modifiedName=v.getTitle(),
+            processName=v.getProcessFileName(),
+            originalIcon=v.getIconPath(),
+            modifiedIcon=v.getIconPath()
+        ) )for v in old])
+    infoUpdates.extend([WindowChangeInfo(
+        type='add',
+        data=WindowProxyDTO(
+            processId=v.getProcess(),
+            id=v.getId(),
+            originalName=v.getTitle(),
+            modifiedName=v.getTitle(),
+            processName=v.getProcessFileName(),
+            originalIcon=v.getIconPath(),
+            modifiedIcon=v.getIconPath()
+        ) )for v in new])
+    infoUpdates.extend([WindowChangeInfo(
+        type='change',
+        data=WindowProxyDTO(
+            processId=v.getProcess(),
+            id=v.getId(),
+            originalName=v.getTitle(),#with lock when sync
+            modifiedName=v.getTitle(),
+            processName=v.getProcessFileName(),
+            originalIcon=v.getIconPath(),
+            modifiedIcon=v.getIconPath()
+        )
+    ) for v in common])
 
-    #窗口不一样
-    if(set(windowsBefore.keys())!=set(windowsNow.keys())):
-        windowsBefore=windowsNow
-        version+=1
-        return version
+    windowsBefore=windowsNow
+    # await notify(infoUpdates)
+    if(infoUpdates.__len__()!=0):
+        asyncio.ensure_future(notify(infoUpdates))
 
-    #窗口都一样那title是不是不一样
-    allWindowsTitleEq=True
-    for k,v in windowsBefore.items():
-        if(v.getTitle()!=windowsNow[k].getTitle()):
-            allWindowsTitleEq=False
-            break
-
-    if(allWindowsTitleEq==False):
-        windowsBefore=windowsNow
-        version+=1
-        return version
-
-    return False
-
-def queryList(sess):
-    lst:list[WindowProxy]=WindowProxy.getTopWindow().listChildren()
-    newWindows={item.hwnd:item for item in lst}
-    oldSet=set(windowsBefore.keys())
-    newSet=set(newWindows.keys())
-    deleted=oldSet-newSet
-    for window in newWindows.values():
-        window.saveIcon()
-    added=newSet-oldSet
-    for windowId in added:
-        window=newWindows[windowId]
-        windowsBefore[windowId]=newWindows[windowId]
-    for windowId in deleted:
-        window=windowsBefore[windowId]
-        window.deleteIcon()
-    lst.sort(key=lambda item:item.getProcessFileName())
-    res= [dict(
-        processId=item.getProcess(),
-        id=item.getId(),
-        originalName=item.getTitle(),
-        modifiedName=None,
-        processName=item.getProcessFileName(),
-        originalIcon=item.getIconPath(),
-        modifiedIcon=item.getIconPath()
-    ) for item in lst]
-    # res.sort(key=lambda item:item['processId'])
-    return res
 import json
 def saveStatus(sess,status):
     with open('status.json','w',encoding='utf-8') as f:

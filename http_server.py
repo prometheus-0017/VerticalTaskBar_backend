@@ -7,12 +7,12 @@ from io import BytesIO
 
 app=Flask(__name__)
 # Path('icons').mkdir(exist_ok=True)
-
+from typing import Optional
 @app.route('/icons/<path:path>',methods=['GET'])
 def send_assets(path):
     # 从iconManager的缓存中获取图片
-    hwnd=int(path)
-    img:bytes=iconManager.getIconByHWND(hwnd)
+    hash=path
+    img:Optional[bytes]=iconManager.getIconByHash(hash);
     if(img==None):
         abort(404)
     else:
