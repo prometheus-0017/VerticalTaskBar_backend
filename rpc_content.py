@@ -4,6 +4,7 @@ from window_proxy import WindowProxy
 windowsBefore:dict[int,WindowProxy]={}
 version=0
 
+
 class WindowProxyDTO(TypedDict):
     processId:int
     id:int
@@ -12,6 +13,8 @@ class WindowProxyDTO(TypedDict):
     processName:str
     originalIcon:str
     modifiedIcon:str
+    pwd:str
+    system:str
 class WindowChangeInfo(TypedDict):
     type:Literal['add','change','delete']
     data:WindowProxyDTO
@@ -48,10 +51,14 @@ async def notify(infos:list[WindowChangeInfo]):
             import traceback
             traceback.print_exc()
             callbacklist.remove(callback)
+async def echo(context):
+    return '1'
 async def sync(context):
     return [WindowProxyDTO(
         processId=v.getProcess(),
         id=v.getId(),
+        pwd=v.getPwd(),
+        system='win',
         originalName=v.getTitle(),
         modifiedName=v.getTitle(),
         processName=v.getProcessFileName(),
@@ -79,6 +86,8 @@ async def detectChange():
         data=WindowProxyDTO(
             processId=v.getProcess(),
             id=v.getId(),
+            pwd=v.getPwd(),
+            system='win',
             originalName=v.getTitle(),
             modifiedName=v.getTitle(),
             processName=v.getProcessFileName(),
@@ -90,6 +99,8 @@ async def detectChange():
         data=WindowProxyDTO(
             processId=v.getProcess(),
             id=v.getId(),
+            pwd=v.getPwd(),
+            system='win',
             originalName=v.getTitle(),
             modifiedName=v.getTitle(),
             processName=v.getProcessFileName(),
@@ -101,6 +112,8 @@ async def detectChange():
         data=WindowProxyDTO(
             processId=v.getProcess(),
             id=v.getId(),
+            pwd=v.getPwd(),
+            system='win',
             originalName=v.getTitle(),#with lock when sync
             modifiedName=v.getTitle(),
             processName=v.getProcessFileName(),
@@ -125,7 +138,6 @@ def loadStatus(sess):
             return json.loads(f.read())
     except :
         return None
-
 def toTop(sess,windowId):
     window_proxy.setTop(windowId)
     pass

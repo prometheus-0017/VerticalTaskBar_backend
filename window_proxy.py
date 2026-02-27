@@ -207,6 +207,20 @@ class IconManager:
                 del self.hashCount[icon_hash]
 iconManager=IconManager()
 
+import psutil
+
+def get_process_cwd(pid):
+    try:
+        proc = psutil.Process(pid)
+        # 在 Windows 上，cwd() 返回进程当前工作目录
+        return proc.cwd()
+    except psutil.NoSuchProcess:
+        raise Exception("进程不存在")
+    except psutil.AccessDenied:
+        raise Exception("权限不足")
+    except Exception as e:
+        raise e
+
 class WindowProxy:
     def getId(self):
         return self.hwnd
@@ -266,6 +280,15 @@ class WindowProxy:
             import traceback
             # print('fail:',pid)
             # traceback.print_exc()
+            return 'none'
+
+    def getPwd(self)->str:
+        pid=self.getProcess()
+        try:
+            return get_process_cwd(pid)
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
             return 'none'
 
     def listChildren(self)->list['WindowProxy']:
