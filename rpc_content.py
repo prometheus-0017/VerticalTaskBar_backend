@@ -41,20 +41,39 @@ async def setCallback(context,callback):
                 await detectChange()
         asyncio.ensure_future(loop())
 from websockets.exceptions import ConnectionClosedError
-async def notify(infos:list[WindowChangeInfo]):
+async def _notify(infos:list[WindowChangeInfo]):
     for callback in callbacklist:
         try:
             await callback(infos)
         except ConnectionClosedError:
-            callbacklist.remove(callback)
+            # callbacklist.remove(callback)
+            pass
         except Exception as e:
             import traceback
             traceback.print_exc()
             callbacklist.remove(callback)
 async def echo(context):
     return '1'
+
+class ChromeProxy:
+    async def sync(self)->list[WindowProxyDTO]:
+        ...
+    async def toTop(self,windowsId:str):
+        ...
+    async def getHost(self)->str:
+        ...
+chromeClients:dict[str,ChromeProxy]={}
+async def loginChrome(context,chromeProxy):
+    what=await chromeProxy.getHost()
+    chromeClients[await chromeProxy.getHost()]=chromeProxy
+    lst=await chromeProxy.sync()
+    lst=[WindowChangeInfo(type='add',data=x) for x in lst]
+    
+    asyncio.ensure_future(_notify(lst))
+
 async def sync(context):
-    return [WindowProxyDTO(
+    res=[]
+    res+= [WindowProxyDTO(
         processId=v.getProcess(),
         id=v.getId(),
         pwd=v.getPwd(),
@@ -65,6 +84,10 @@ async def sync(context):
         originalIcon=v.getIconPath(),
         modifiedIcon=v.getIconPath()
     ) for v in windowsBefore.values()]
+    for clientChrome in chromeClients.keys():
+        res+=await chromeClients[clientChrome].sync()
+    return res
+import chrome_proxy
 async def detectChange():
     global windowsBefore
 
@@ -125,8 +148,9 @@ async def detectChange():
     windowsBefore=windowsNow
     # await notify(infoUpdates)
     if(infoUpdates.__len__()!=0):
-        asyncio.ensure_future(notify(infoUpdates))
-
+        asyncio.ensure_future(_notify(infoUpdates))
+async def notify(contiext,infos:list[WindowChangeInfo]):
+    await _notify(infos)
 import json
 def saveStatus(sess,status):
     with open('status.json','w',encoding='utf-8') as f:
@@ -138,8 +162,15 @@ def loadStatus(sess):
             return json.loads(f.read())
     except :
         return None
-def toTop(sess,windowId):
-    window_proxy.setTop(windowId)
+async def toTop(sess,windowId,system=None):
+    if(system==None or system=='win'):
+        window_proxy.setTop(windowId)
+        return
+    for client in chromeClients.values():
+        if(await client.getHost()==system):
+            await client.toTop(windowId)
+
+
     pass
 # from PyQt5.QtCore import QMetaObject,Qt
 from PySide6.QtCore import QMetaObject,Qt
