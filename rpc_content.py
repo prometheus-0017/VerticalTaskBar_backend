@@ -63,6 +63,7 @@ class ChromeProxy:
     async def getHost(self)->str:
         ...
 chromeClients:dict[str,ChromeProxy]={}
+import traceback
 async def loginChrome(context,chromeProxy):
     what=await chromeProxy.getHost()
     chromeClients[await chromeProxy.getHost()]=chromeProxy
@@ -85,7 +86,11 @@ async def sync(context):
         modifiedIcon=v.getIconPath()
     ) for v in windowsBefore.values()]
     for clientChrome in chromeClients.keys():
-        res+=await chromeClients[clientChrome].sync()
+        try:
+            res+=await chromeClients[clientChrome].sync()
+        except Exception as e:
+            traceback.print_exc()
+            
     return res
 import chrome_proxy
 async def detectChange():
