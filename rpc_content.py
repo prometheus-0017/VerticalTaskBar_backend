@@ -172,10 +172,11 @@ async def toTop(sess,windowId,system=None):
         window_proxy.setTop(windowId)
         return
     for client in chromeClients.values():
-        if(await client.getHost()==system):
-            await client.toTop(windowId)
-
-
+        try:
+            if(await client.getHost()==system):
+                await client.toTop(windowId)
+        except Exception as e:
+            traceback.print_exc()
     pass
 # from PyQt5.QtCore import QMetaObject,Qt
 from PySide6.QtCore import QMetaObject,Qt
