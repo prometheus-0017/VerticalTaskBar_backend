@@ -37,8 +37,11 @@ async def setCallback(context,callback):
             global loopStart
             loopStart=True
             while True:
-                await asyncio.sleep(1);
-                await detectChange()
+                try:
+                    await asyncio.sleep(1);
+                    await detectChange()
+                except Exception as e:
+                    traceback.print_exc()
         asyncio.ensure_future(loop())
 from websockets.exceptions import ConnectionClosedError
 async def _notify(infos:list[WindowChangeInfo]):

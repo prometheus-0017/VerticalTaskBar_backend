@@ -208,16 +208,19 @@ class IconManager:
 iconManager=IconManager()
 
 import psutil
-
+class MyException(Exception):
+    def __init__(self, *args: object) -> None:
+        super().__init__(*args)
+    pass
 def get_process_cwd(pid):
     try:
         proc = psutil.Process(pid)
         # 在 Windows 上，cwd() 返回进程当前工作目录
         return proc.cwd()
     except psutil.NoSuchProcess:
-        raise Exception("进程不存在")
+        raise MyException("进程不存在")
     except psutil.AccessDenied:
-        raise Exception("权限不足")
+        raise MyException("权限不足")
     except Exception as e:
         raise e
 
@@ -286,9 +289,15 @@ class WindowProxy:
         pid=self.getProcess()
         try:
             return get_process_cwd(pid)
+        except MyException as e:
+            print(self.getTitle(),e.args[0])
         except Exception as e:
-            import traceback
-            traceback.print_exc()
+            #pid must be a positive integer
+            if(len(e.args)>0 and 'pid must be a positive integer' in e.args[0]):
+                print('strange pid')
+            else:
+                import traceback
+                traceback.print_exc()
             return 'none'
 
     def listChildren(self)->list['WindowProxy']:
