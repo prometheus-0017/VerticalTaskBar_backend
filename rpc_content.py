@@ -68,8 +68,10 @@ class ChromeProxy:
 chromeClients:dict[str,ChromeProxy]={}
 import traceback
 async def loginChrome(context,chromeProxy):
-    what=await chromeProxy.getHost()
-    chromeClients[await chromeProxy.getHost()]=chromeProxy
+    hostId=await chromeProxy.getHost()
+    if(hostId in chromeClients):
+        return 
+    chromeClients[hostId]=chromeProxy
     lst=await chromeProxy.sync()
     lst=[WindowChangeInfo(type='add',data=x) for x in lst]
     
