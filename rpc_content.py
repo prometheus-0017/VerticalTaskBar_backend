@@ -160,6 +160,9 @@ async def detectChange():
     if(infoUpdates.__len__()!=0):
         asyncio.ensure_future(_notify(infoUpdates))
 async def notify(contiext,infos:list[WindowChangeInfo]):
+    if(type(infos)!=list):
+        print('unknown notifyData',infos)
+        return 
     await _notify(infos)
 import json
 def saveStatus(sess,status):
