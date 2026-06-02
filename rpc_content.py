@@ -184,6 +184,15 @@ async def toTop(sess,windowId,system=None):
             if(await client.getHost()==system):
                 await client.toTop(windowId)
         except Exception as e:
+            print('chrome totop failed,current id:',system)
+            print('exist client:')
+            for key in chromeClients.keys():
+                try:
+                    await chromeClients[key].getHost()
+                    connecting=True
+                except:
+                    connecting=False
+                print(f'[{key}]:{connecting}')
             traceback.print_exc()
     pass
 # from PyQt5.QtCore import QMetaObject,Qt

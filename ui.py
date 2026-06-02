@@ -15,6 +15,7 @@ class CustomWebView(QWebEngineView):
 window=None
 def getWindow():
     global window
+    assert window!=None
     return window
 class CustomWindow(QWidget):
     exitSignal = Signal()
