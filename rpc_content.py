@@ -97,7 +97,6 @@ async def sync(context):
             traceback.print_exc()
             
     return res
-import chrome_proxy
 async def detectChange():
     global windowsBefore
 
