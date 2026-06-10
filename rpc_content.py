@@ -69,13 +69,15 @@ chromeClients:dict[str,ChromeProxy]={}
 import traceback
 async def loginChrome(context,chromeProxy):
     hostId=await chromeProxy.getHost()
-    if(hostId in chromeClients):
-        return 
     chromeClients[hostId]=chromeProxy
-    lst=await chromeProxy.sync()
-    lst=[WindowChangeInfo(type='add',data=x) for x in lst]
-    
-    asyncio.ensure_future(_notify(lst))
+    if(hostId in chromeClients):
+        # reconnecting, last client's ws is disconnected
+        pass
+    else:
+        # as first time, maybe
+        lst=await chromeProxy.sync()
+        lst=[WindowChangeInfo(type='add',data=x) for x in lst]
+        asyncio.ensure_future(_notify(lst))
 
 async def sync(context):
     res=[]
