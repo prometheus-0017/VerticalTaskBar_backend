@@ -21,9 +21,14 @@ if(is_port_in_use(conf.get('websocketPort'))):
     messageBox(f'{conf.get("websocketPort")}端口被占用')
     sys.exit(1)
 
+
 from http_server import startHttpServer
 from ui import startView
 from websocket_server import startWebSocket
+from util import setEnv,is_admin,confirm
+from show_taskbar import tryStartKeyboardListener
+setEnv('taskbar_http_port',conf.get('httpPort'))
 detach(startHttpServer)
 detach(startWebSocket)
+detach(tryStartKeyboardListener)
 startView()

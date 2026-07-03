@@ -22,6 +22,14 @@ def send_assets(path):
 @app.route('/')
 def index():
     return send_file('dist/index.html')
+
+@app.route('/expand',methods=['POST'])
+def expand():
+    from ui import getWindow
+    getWindow().expandSignal.emit()
+    return ''
+    
+
 @app.route('/<path:path>')
 def static2(path):
     return send_file(f'dist/{path}')
