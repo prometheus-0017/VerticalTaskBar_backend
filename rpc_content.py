@@ -87,7 +87,7 @@ async def sync(context):
         pwd=v.getPwd(),
         system='win',
         originalName=v.getTitle(),
-        modifiedName=v.getTitle(),
+        modifiedName='',
         processName=v.getProcessFileName(),
         originalIcon=v.getIconPath(),
         modifiedIcon=v.getIconPath()
@@ -107,7 +107,7 @@ async def detectChange():
     infoUpdates:list[WindowChangeInfo]=[]
     old=[windowsBefore[k] for k in windowsBefore.keys()-windowsNow.keys()]
     new=[windowsNow[k] for k in windowsNow.keys()-windowsBefore.keys()]
-    common=[windowsNow[k] for k in windowsNow.keys()&windowsBefore.keys() if(windowsBefore[k].getTitle()!=windowsNow[k].getTitle())]
+    common=[windowsNow[k] for k in windowsNow.keys()&windowsBefore.keys() if(windowsBefore[k].getPrevName()!=windowsNow[k].getTitle())]
     for v in old:
         logger.info(f'delete {v.getId()} {v.getTitle()}')
     for v in new:
@@ -115,6 +115,8 @@ async def detectChange():
         v.saveIcon()
     for v in new:
         v.saveIcon()
+    for v in common:
+        v.saveName()
     infoUpdates.extend([WindowChangeInfo(
         type='delete',
         data=WindowProxyDTO(
@@ -123,7 +125,7 @@ async def detectChange():
             pwd=v.getPwd(),
             system='win',
             originalName=v.getTitle(),
-            modifiedName=v.getTitle(),
+            modifiedName='',
             processName=v.getProcessFileName(),
             originalIcon=v.getIconPath(),
             modifiedIcon=v.getIconPath()
@@ -136,7 +138,7 @@ async def detectChange():
             pwd=v.getPwd(),
             system='win',
             originalName=v.getTitle(),
-            modifiedName=v.getTitle(),
+            modifiedName='',
             processName=v.getProcessFileName(),
             originalIcon=v.getIconPath(),
             modifiedIcon=v.getIconPath()
@@ -149,7 +151,7 @@ async def detectChange():
             pwd=v.getPwd(),
             system='win',
             originalName=v.getTitle(),#with lock when sync
-            modifiedName=v.getTitle(),
+            modifiedName='',
             processName=v.getProcessFileName(),
             originalIcon=v.getIconPath(),
             modifiedIcon=v.getIconPath()

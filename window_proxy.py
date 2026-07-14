@@ -234,7 +234,12 @@ class WindowProxy:
     def __init__(self,previous:'WindowProxy',hwnd):
         self.hwnd = hwnd
         self.previous = previous
+        self.name=''
         pass
+    def saveName(self):
+        self.name=self.getTitle()
+    def getPrevName(self):
+        return self.name
     def saveIcon(self) -> str:
         return iconManager.saveIcon(self)
         # hIconHandle= win32gui.GetClassLong(self.hwnd,win32con.GCL_HICON)

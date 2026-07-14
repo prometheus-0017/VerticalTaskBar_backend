@@ -30,5 +30,5 @@ from show_taskbar import tryStartKeyboardListener
 setEnv('taskbar_http_port',conf.get('httpPort'))
 detach(startHttpServer)
 detach(startWebSocket)
-detach(tryStartKeyboardListener)
+# detach(tryStartKeyboardListener)
 startView()
