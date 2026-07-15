@@ -13,22 +13,27 @@ from util import detach,is_port_in_use,messageBox
 import conf
 import sys
 
-if(is_port_in_use(conf.get('httpPort'))):
-    messageBox(f'{conf.get('httpPort')}端口被占用')
-    sys.exit(1)
-    
-if(is_port_in_use(conf.get('websocketPort'))):
-    messageBox(f'{conf.get("websocketPort")}端口被占用')
-    sys.exit(1)
 
 
 from http_server import startHttpServer
 from ui import startView
 from websocket_server import startWebSocket
-from util import setEnv,is_admin,confirm
 from show_taskbar import tryStartKeyboardListener
-setEnv('taskbar_http_port',conf.get('httpPort'))
+from util import setEnv
+
+# setEnv('taskbar_http_port',conf.get('httpPort'))
+
 detach(startHttpServer)
 detach(startWebSocket)
+def env():
+    import semi
+    setEnv('taskbar_http_port',conf.get('httpPort'))
+    while(is_port_in_use(conf.get('httpPort'))==False):
+        import time
+        time.sleep(0.1)
+    semi.setOK(semi.FLAG_HTTP_START)
+detach(env)
+import semi
+semi.waitForStart()
 # detach(tryStartKeyboardListener)
 startView()

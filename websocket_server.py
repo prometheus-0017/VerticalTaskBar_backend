@@ -48,7 +48,20 @@ from xuri_rpc_websocket import createServer
 
 import conf
 from typing import cast
+from util import messageBox,is_port_in_use
+import sys
+import semi
 def startWebSocket():
+    
+    if(is_port_in_use(conf.get('websocketPort'))):
+        messageBox(f'{conf.get("websocketPort")}端口被占用')
+        sys.exit(1)
+
+    semi.setOK(semi.FLAG_WEBSOCKET)
+    semi.waitForCheck()
+    print('websocket continue')
+
+    
     #创建当前线程async loop
     print('trying starting')
     loop=asyncio.new_event_loop()

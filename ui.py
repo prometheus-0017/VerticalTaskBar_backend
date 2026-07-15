@@ -127,6 +127,9 @@ class CustomWindow(QWidget):
 
         # 右侧 Web 视图
         self.webview = CustomWebView()
+
+
+
         self.webview.load(QUrl("http://localhost:15000"))
 
         # 将按钮区和 webview 添加到主布局中
@@ -158,8 +161,17 @@ class CustomWindow(QWidget):
         y = (screen.height() - window_height) // 2
         self.move(x, y)
 def startView():
+    import signal
+
     global window
     app = QApplication(sys.argv)
+    
+    def handler(sig,frame):
+        import rpc_content
+        rpc_content.exit(None)
+        
+    signal.signal(signal.SIGINT, handler)
+
     window = CustomWindow()
     window.show()
     sys.exit(app.exec_())

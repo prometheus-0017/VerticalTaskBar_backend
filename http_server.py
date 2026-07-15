@@ -37,7 +37,19 @@ def static2(path):
 # def send_dist(path):
 #     return send_file('dist/'+path)
 import conf
+import semi
+import sys
+from util import is_port_in_use,messageBox,setEnv
 def startHttpServer():
+
+    if(is_port_in_use(conf.get('httpPort'))):
+        messageBox(f'{conf.get('httpPort')}端口被占用')
+        sys.exit(1)
+
+    semi.setOK(semi.FLAG_HTTP)
+    semi.waitForCheck()
+    print('http continue')
+
     app.run(host='0.0.0.0',port=conf.get('httpPort'),debug=False)
 
 if __name__ == '__main__':
