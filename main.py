@@ -2,6 +2,33 @@ import sys
 if('.' not in sys.path):
     sys.path.append('.')
 import os
+
+# ---- Nuitka 打包后 pythonnet / clr_loader 的 DLL 路径修复 ----
+# pythonnet 用 Path(__file__) 定位 Python.Runtime.dll，
+# clr_loader 用 Path(__file__) 定位 ClrLoader.dll。
+# Nuitka standalone 打包后 __file__ 可能无法正确解析，这里手动修正。
+if getattr(sys, 'frozen', False) or '__compiled__' in dir():
+    _base = os.path.dirname(os.path.abspath(sys.executable))
+    # 修正 pythonnet.__file__
+    import pythonnet
+    _pn_init = os.path.join(_base, 'pythonnet', '__init__.py')
+    if not os.path.exists(_pn_init):
+        os.makedirs(os.path.join(_base, 'pythonnet'), exist_ok=True)
+        with open(_pn_init, 'w') as _f:
+            _f.write('')
+    pythonnet.__file__ = _pn_init
+    # 修正 clr_loader.ffi.__file__
+    import clr_loader.ffi
+    _cl_init = os.path.join(_base, 'clr_loader', 'ffi', '__init__.py')
+    if not os.path.exists(_cl_init):
+        os.makedirs(os.path.join(_base, 'clr_loader', 'ffi'), exist_ok=True)
+        with open(_cl_init, 'w') as _f:
+            _f.write('')
+    clr_loader.ffi.__file__ = _cl_init
+    # 预先加载 pythonnet，后续 import clr 会直接跳过
+    pythonnet.load()
+# ---- END pythonnet 路径修复 ----
+
 dllPath=os.environ.get('dllPath')
 print(dllPath)
 if(dllPath):

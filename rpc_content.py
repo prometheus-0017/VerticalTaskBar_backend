@@ -198,10 +198,6 @@ async def toTop(sess,windowId,system=None):
                 print(f'[{key}]:{connecting}')
             traceback.print_exc()
     pass
-# from PyQt5.QtCore import QMetaObject,Qt
-from PySide6.QtCore import QMetaObject,Qt
-
-
 from ui import getWindow
 def exit(sess):
     getWindow().exitSignal.emit()
