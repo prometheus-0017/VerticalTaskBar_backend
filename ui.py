@@ -114,11 +114,19 @@ class CustomWindow:
         x1, y1, x2, y2 = self._current_rect()
         return x1 <= x <= x2 and y1 <= y <= y2
 
+    @staticmethod
+    def _is_dragging():
+        """检测鼠标左键是否处于按下状态（拖拽中）。
+        GetKeyState 返回值的高位为 1 表示按键被按下。
+        """
+        return win32api.GetKeyState(win32con.VK_LBUTTON) & 0x8000 != 0
+
     # ---- 悬停轮询：替代旧的 enterEvent / leaveEvent ----
     def _poll_loop(self):
         while not self._closed:
             time.sleep(0.1)
             try:
+                dragging = self._is_dragging()
                 inside = self._cursor_inside()
                 if inside:
                     self._entered_once = True
@@ -128,6 +136,9 @@ class CustomWindow:
                 elif self._expanded and self._entered_once:
                     # 仅在鼠标至少进入过一次后才自动收起，避免启动即消失
                     if conf['pin']:
+                        continue
+                    # 鼠标左键按下（拖拽状态）时不收起，防止拖拽文件时界面消失
+                    if dragging:
                         continue
                     self.collapse(False)
             except Exception:
