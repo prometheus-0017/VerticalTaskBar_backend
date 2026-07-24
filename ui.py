@@ -64,7 +64,7 @@ class _Signal:
 
 class CustomWindow:
     def __init__(self):
-        self._win = None
+        self.webWindow = None
         self._expanded = True  # 初始按旧逻辑处于展开态
         self._entered_once = False  # 鼠标首次进入前不自动收起（对齐旧 leaveEvent 语义）
         self._closed = False
@@ -84,21 +84,21 @@ class CustomWindow:
         os._exit(0)
 
     def expand(self):
-        if self._win is None:
+        if self.webWindow is None:
             return
         self._expanded = True
-        self._win.resize(width, self.fullHeight())
-        self._win.move(0, 0)
+        self.webWindow.resize(width, self.fullHeight())
+        self.webWindow.move(0, 0)
 
     def collapse(self, force=True):
-        if self._win is None:
+        if self.webWindow is None:
             return
         # force=False 时，若鼠标仍在窗口范围内则不收起（对齐旧 collapse 逻辑）
         if not force and self._cursor_inside():
             return
         self._expanded = False
-        self._win.resize(COLLAPSED_W, COLLAPSED_H)
-        self._win.move(0, 0)
+        self.webWindow.resize(COLLAPSED_W, COLLAPSED_H)
+        self.webWindow.move(0, 0)
 
     # ---- 鼠标位置判定 ----
     def _current_rect(self):
@@ -209,7 +209,7 @@ class CustomWindow:
         threading.Thread(target=self._poll_loop, daemon=True).start()
 
     def create(self):
-        self._win = webview.create_window(
+        self.webWindow = webview.create_window(
             TITLE,
             url=URL,
             frameless=True,
@@ -222,8 +222,8 @@ class CustomWindow:
             min_size=(1, 1),
             easy_drag=False,
         )
-        self._win.events.shown += self._on_shown
-        return self._win
+        self.webWindow.events.shown += self._on_shown
+        return self.webWindow
 import pythonnet
 
 def startView():

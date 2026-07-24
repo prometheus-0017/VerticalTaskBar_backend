@@ -22,7 +22,6 @@ class WindowChangeInfo(TypedDict):
 from typing import Callable,Awaitable
 callbacklist:list[Callable[[list[WindowChangeInfo]],Awaitable[None]]]=[]
 
-loopStart=False
 import asyncio
 from logging import getLogger
 logger=getLogger(__name__)
@@ -30,19 +29,17 @@ import logging
 logging.basicConfig(level=logging.INFO,filemode='log.txt')
 async def setCallback(context,callback):
     callbacklist.append(callback)
-    # await detectChange()
-    global loopStart
-    if(not loopStart):
-        async def loop():
-            global loopStart
-            loopStart=True
-            while True:
-                try:
-                    await asyncio.sleep(1);
-                    await detectChange()
-                except Exception as e:
-                    traceback.print_exc()
-        asyncio.ensure_future(loop())
+    
+def startWindowsDetectLoop():
+    async def loop():
+        while True:
+            try:
+                await asyncio.sleep(1);
+                await detectChange()
+            except Exception as e:
+                traceback.print_exc()
+    asyncio.ensure_future(loop())
+
 from websockets.exceptions import ConnectionClosedError
 async def _notify(infos:list[WindowChangeInfo]):
     for callback in callbacklist:

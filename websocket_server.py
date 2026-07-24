@@ -66,6 +66,7 @@ def startWebSocket():
     print('trying starting')
     loop=asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    rpc_content.startWindowsDetectLoop()
     async def run():
         serve,_,receiver=await createServer('backend','0.0.0.0',cast(int,conf.get('websocketPort')),'/')
         mainPlaceHolder=object()
